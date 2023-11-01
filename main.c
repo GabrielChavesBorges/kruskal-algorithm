@@ -14,8 +14,10 @@ typedef struct
 
 // Prototypes
 bool is_contained(int value, int *array, int array_size);
+void int_push(int *array, int *array_size, int value);
+void int_pop(int *array, int *array_size, int value);
 void sort_by_weight_asc(Edge *edges, int n_edges);
-Edge *kruskal(Edge *original_graph, int n_edges);
+Edge *kruskal(Edge *original_graph, int n_edges, int *solution_size);
 
 // Main ------------------------------------------------------------------------------
 
@@ -48,7 +50,12 @@ int main()
         edges[current].end_node = temp_b;
         edges[current].weight = temp_w;
     }
-    // apply kruskal's algorithm
+    printf("MST:\n\n");
+    int mst_size = 0;
+    Edge *mst = kruskal(edges, n_edges, &mst_size);
+    for (i = 0; i < mst_size; i++) {
+        printf("%d -- %d --> %d\n", &mst[i].start_node, &mst[i].weight, &mst[i].end_node);
+    }
     return 0;
 }
 
@@ -68,6 +75,46 @@ bool is_contained(int value, int *array, int array_size)
     return false;
 }
 
+// INT PUSH
+void int_push(int *array, int *array_size, int value)
+{
+    int current_index = *array_size;
+    *array_size++;
+    array = (int *)realloc(array, sizeof(int) * (*array_size));
+    array[current_index] = value;
+}
+
+// INT POP
+void int_pop(int *array, int *array_size, int value)
+{
+    int target_index = -1;
+    int i;
+    int limit = *array_size;
+    // find target index
+    for (i = 0; i < limit; i++)
+    {
+        if (array[i] == value)
+        {
+            target_index = i;
+            break;
+        }
+    }
+    // if value not found
+    if (target_index == -1)
+    {
+        return;
+    }
+    limit--;
+    // remove value
+    for (i = target_index; i < limit; i++)
+    {
+        array[i] = array[i++];
+    }
+    // resize
+    *array_size--;
+    array = (int *)realloc(array, sizeof(int) * (*array_size));
+}
+
 // MERGE SORT
 void merge_sort(int start, int end, Edge *edges, Edge *temp)
 {
@@ -78,6 +125,7 @@ void merge_sort(int start, int end, Edge *edges, Edge *temp)
         half = (start + end) / 2;
         merge_sort(start, half, edges, temp);
         merge_sort(half + 1, end, edges, temp);
+
         for (l1 = start, l2 = half + 1, i = start; l1 <= half && l2 <= end; i++)
         {
             if (edges[l1].weight <= edges[l2].weight)
@@ -117,43 +165,137 @@ void sort_by_weight_asc(Edge *edges, int n_edges)
 }
 
 // KRUSKAL
-Edge *kruskal(Edge *original_graph, int n_edges)
+Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
 {
     int i;
-    int pending_list_size = 0;
-    int *pending_list;
+    int node_list_size = 0;
+    int forest_size = 0;
+    int *tree_size_list;
+    int *node_list;
+    Edge *solution;
+    int **forest;
 
-    pending_list = malloc(pending_list_size);
-    // Extract node list (pending list)
+    node_list = malloc(node_list_size);
+    tree_size_list = malloc(forest_size);
+    solution = malloc(*solution_size);
+    forest = malloc(forest_size);
+
+    // Extract node list
     for (i = 0; i < n_edges; i++)
     {
-        if (!is_contained(original_graph[i].start_node, pending_list, pending_list_size))
+        int start = edges[i].start_node;
+        bool is_start_in_list = is_contained(start, node_list, node_list_size);
+        int end = edges[i].end_node;
+        bool is_end_in_list = is_contained(end, node_list, node_list_size);
+
+        if (!is_start_in_list)
         {
-            int current_node = pending_list_size;
-            pending_list_size++;
-            pending_list = (int *)realloc(pending_list, sizeof(int) * pending_list_size);
-            pending_list[current_node] = original_graph[i].start_node;
+            int_push(node_list, &node_list_size, start);
         }
-        if (!is_contained(original_graph[i].end_node, pending_list, pending_list_size))
+        if (!is_end_in_list)
         {
-            int current_node = pending_list_size;
-            pending_list_size++;
-            pending_list = (int *)realloc(pending_list, sizeof(int) * pending_list_size);
-            pending_list[current_node] = original_graph[i].end_node;
+            int_push(node_list, &node_list_size, end);
         }
     }
+
     // sort edges by weight in ascending order
-    sort_by_weight_asc(original_graph, n_edges);
+    sort_by_weight_asc(edges, n_edges);
+
+    // set initial forest:
+    forest_size = node_list_size;
+    forest = (int **)realloc(forest, sizeof(int *) * (forest_size));
+    tree_size_list = (int *)realloc(tree_size_list, sizeof(int) * forest_size);
+    for (i = 0; i < forest_size; i++)
+    {
+        tree_size_list[i] = 1;
+        forest[i] = (int *)malloc(sizeof(int) * tree_size_list[i]);
+        forest[i][0] = node_list[i];
+    }
+
     // for each edge:
-    // check if starting or ending node is in pending list
-    // if none is:
-    // skip
-    // if only one is:
-    // add edge to solution
-    // remove node from pending list
-    // check partial list for node, recursive removal of other partial list items
-    // if pending list is empty, break
-    // if both are:
-    // if exact path is not already in partial list:
-    // add node to partial list
+    int edge_idx;
+    for (edge_idx = 0; edge_idx < n_edges; edge_idx++)
+    {
+        // take the starting point and look for it in the forest.
+        int tree_idx;
+        for (tree_idx = 0; tree_idx < forest_size; tree_idx++)
+        {
+            int node_idx;
+            int node_limit = tree_size_list[tree_idx];
+            bool is_start_found = false;
+            for (node_idx = 0; node_idx < node_limit; node_idx++)
+            {
+                if (forest[tree_idx][node_idx] == edges[edge_idx].start_node)
+                {
+                    is_start_found = true;
+                    break;
+                }
+            }
+            if (is_start_found)
+            {
+                // once we find it, check if the ending point is in the same tree
+                bool is_end_found = false;
+                for (node_idx = 0; node_idx < node_limit; node_idx++)
+                {
+                    if (forest[tree_idx][node_idx] == edges[edge_idx].end_node)
+                    {
+                        is_end_found = true;
+                        break;
+                    }
+                }
+                // if it is, continue to next edge without taking action
+                if (is_end_found)
+                {
+                    break;
+                }
+                // if it's not
+                // find tree where end node is
+                int tree_idx_2;
+                for (tree_idx_2 = 0; tree_idx_2 < forest_size; tree_idx_2++)
+                {
+                    int node_idx_2;
+                    int node_2_limit = tree_size_list[tree_idx_2];
+                    bool is_end_found = false;
+                    for (node_idx_2 = 0; node_idx_2 < node_2_limit; node_idx_2++)
+                    {
+                        if (forest[tree_idx_2][node_idx_2] == edges[edge_idx].end_node)
+                        {
+                            is_end_found = true;
+                            break;
+                        }
+                    }
+                    if (is_end_found)
+                    {
+                        // copy all end node tree nodes to starting node tree
+                        for (node_idx_2 = 0; node_idx_2 < node_2_limit; node_idx_2++)
+                        {
+                            int_push(forest[tree_idx], &tree_size_list[tree_idx], forest[tree_idx_2][node_idx_2]);
+                        }
+                        // remove end node tree
+                        int tree_2_limit = forest_size - 1;
+                        for (/*no init*/; tree_idx_2 < tree_2_limit; tree_idx_2++) {
+                            forest[tree_idx_2] = forest[tree_idx_2 + 1];
+                        }
+                        forest_size--;
+                        forest = (int **) realloc(forest, sizeof(int *) * forest_size);
+                        // add edge to solution set
+                        int current_solution = *solution_size;
+                        *solution_size++;
+                        solution = (Edge*) realloc(solution, sizeof(Edge) * (*solution_size));
+                        solution[current_solution] = edges[edge_idx];
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        // check if forest size is 1, if it is, return answer
+        if (forest_size == 1) {
+            return solution;
+        }
+    }
+    // If tree wasn't formed return empty array.
+    Edge error[] = {};
+    return error;
 }
+
