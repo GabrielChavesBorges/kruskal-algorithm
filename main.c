@@ -51,12 +51,13 @@ int main()
         edges[current].weight = temp_w;
     }
     int mst_size = 0;
-    Edge *mst = kruskal(edges, n_edges, &mst_size);
+    int *mst_size_ptr = &mst_size;
+    Edge *mst = kruskal(edges, n_edges, mst_size_ptr);
     printf("mst size: %d\n", mst_size);
     printf("MST:\n\n");
     for (i = 0; i < mst_size; i++)
     {
-        printf("%d -- %d --> %d\n", &mst[i].start_node, &mst[i].weight, &mst[i].end_node);
+        printf("%d -- %d --> %d\n", mst[i].start_node, mst[i].weight, mst[i].end_node);
     }
     return 0;
 }
@@ -83,10 +84,13 @@ void int_push(int *array, int *array_size, int value)
     int j;
     int current_index = *array_size;
     (*array_size)++;
-    int * temp_array = (int *)realloc(array, sizeof(int) * (*array_size));
-    if (temp_array == NULL) {
+    int *temp_array = (int *)realloc(array, sizeof(int) * (*array_size));
+    if (temp_array == NULL)
+    {
         printf("ERROR in realloc for value %d, asking for %d bytes\n", value, sizeof(int) * (*array_size));
-    } else {
+    }
+    else
+    {
         array = temp_array;
     }
     array[current_index] = value;
@@ -183,10 +187,10 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
     Edge *solution;
     int **forest;
 
-    node_list = malloc(node_list_size);
-    tree_size_list = malloc(forest_size);
-    solution = malloc(*solution_size);
-    forest = malloc(forest_size);
+    node_list = (int *)malloc(node_list_size);
+    tree_size_list = (int *)malloc(forest_size);
+    solution = (Edge *)malloc(*solution_size);
+    forest = (int **)malloc(forest_size);
 
     // Extract node list
     for (i = 0; i < n_edges; i++)
@@ -199,16 +203,42 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
 
         if (!is_start_in_list)
         {
-            int_push(node_list, &node_list_size, start);
+            int current_index = node_list_size;
+            node_list_size++;
+            int *temp_array = (int *)realloc(node_list, sizeof(int) * (node_list_size));
+            if (temp_array == NULL)
+            {
+                printf("ERROR in realloc for value %d, asking for %d bytes\n", start, sizeof(int) * (node_list_size));
+            }
+            else
+            {
+                node_list = temp_array;
+            }
+            node_list[current_index] = start;
         }
         if (!is_end_in_list)
         {
-            int_push(node_list, &node_list_size, end);
+            int current_index = node_list_size;
+            node_list_size++;
+            int *temp_array = (int *)realloc(node_list, sizeof(int) * (node_list_size));
+            if (temp_array == NULL)
+            {
+                printf("ERROR in realloc for value %d, asking for %d bytes\n", end, sizeof(int) * (node_list_size));
+            }
+            else
+            {
+                node_list = temp_array;
+            }
+            node_list[current_index] = end;
         }
     }
 
     // sort edges by weight in ascending order
     sort_by_weight_asc(edges, n_edges);
+
+    for (i = 0; i < n_edges; i++) {
+        printf("%d -- %d --> %d\n", edges[i].start_node, edges[i].weight, edges[i].end_node);
+    }
 
     // set initial forest:
     forest_size = node_list_size;
@@ -225,6 +255,7 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
     int edge_idx;
     for (edge_idx = 0; edge_idx < n_edges; edge_idx++)
     {
+        printf("edge idx: %d\n", edge_idx);
         // take the starting point and look for it in the forest.
         int tree_idx;
         for (tree_idx = 0; tree_idx < forest_size; tree_idx++)
@@ -278,7 +309,18 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
                         // copy all end node tree nodes to starting node tree
                         for (node_idx_2 = 0; node_idx_2 < node_2_limit; node_idx_2++)
                         {
-                            int_push(forest[tree_idx], &tree_size_list[tree_idx], forest[tree_idx_2][node_idx_2]);
+                            int current_index = tree_size_list[tree_idx];
+                            tree_size_list[tree_idx]++;
+                            int *temp_array = (int *)realloc(forest[tree_idx], sizeof(int) * (tree_size_list[tree_idx]));
+                            if (temp_array == NULL)
+                            {
+                                printf("ERROR in realloc for value %d, asking for %d bytes\n", forest[tree_idx_2][node_idx_2], sizeof(int) * (tree_size_list[tree_idx]));
+                            }
+                            else
+                            {
+                                forest[tree_idx] = temp_array;
+                            }
+                            forest[tree_idx][current_index] = forest[tree_idx_2][node_idx_2];
                         }
                         // remove end node tree
                         int tree_2_limit = forest_size - 1;
@@ -290,7 +332,7 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
                         forest = (int **)realloc(forest, sizeof(int *) * forest_size);
                         // add edge to solution set
                         int current_solution = *solution_size;
-                        *solution_size++;
+                        (*solution_size)++;
                         solution = (Edge *)realloc(solution, sizeof(Edge) * (*solution_size));
                         solution[current_solution] = edges[edge_idx];
                         break;
@@ -300,6 +342,7 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
             }
         }
         // check if forest size is 1, if it is, return answer
+        printf("Forest size: %d\n", forest_size);
         if (forest_size == 1)
         {
             return solution;
