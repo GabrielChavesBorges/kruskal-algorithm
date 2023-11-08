@@ -14,8 +14,6 @@ typedef struct
 
 // Prototypes
 bool is_contained(int value, int *array, int array_size);
-void int_push(int *array, int *array_size, int value);
-void int_pop(int *array, int *array_size, int value);
 void sort_by_weight_asc(Edge *edges, int n_edges);
 Edge *kruskal(Edge *original_graph, int n_edges, int *solution_size);
 
@@ -75,55 +73,6 @@ bool is_contained(int value, int *array, int array_size)
         }
     }
     return false;
-}
-
-// INT PUSH
-void int_push(int *array, int *array_size, int value)
-{
-    int j;
-    int current_index = *array_size;
-    (*array_size)++;
-    int *temp_array = (int *)realloc(array, sizeof(int) * (*array_size));
-    if (temp_array == NULL)
-    {
-        printf("ERROR in realloc for value %d, asking for %d bytes\n", value, sizeof(int) * (*array_size));
-    }
-    else
-    {
-        array = temp_array;
-    }
-    array[current_index] = value;
-}
-
-// INT POP
-void int_pop(int *array, int *array_size, int value)
-{
-    int target_index = -1;
-    int i;
-    int limit = *array_size;
-    // find target index
-    for (i = 0; i < limit; i++)
-    {
-        if (array[i] == value)
-        {
-            target_index = i;
-            break;
-        }
-    }
-    // if value not found
-    if (target_index == -1)
-    {
-        return;
-    }
-    limit--;
-    // remove value
-    for (i = target_index; i < limit; i++)
-    {
-        array[i] = array[i++];
-    }
-    // resize
-    *array_size--;
-    array = (int *)realloc(array, sizeof(int) * (*array_size));
 }
 
 // MERGE SORT
