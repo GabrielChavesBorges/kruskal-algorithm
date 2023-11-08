@@ -53,8 +53,7 @@ int main()
     int mst_size = 0;
     int *mst_size_ptr = &mst_size;
     Edge *mst = kruskal(edges, n_edges, mst_size_ptr);
-    printf("mst size: %d\n", mst_size);
-    printf("MST:\n\n");
+    printf("MST:\n");
     for (i = 0; i < mst_size; i++)
     {
         printf("%d -- %d --> %d\n", mst[i].start_node, mst[i].weight, mst[i].end_node);
@@ -236,10 +235,6 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
     // sort edges by weight in ascending order
     sort_by_weight_asc(edges, n_edges);
 
-    for (i = 0; i < n_edges; i++) {
-        printf("%d -- %d --> %d\n", edges[i].start_node, edges[i].weight, edges[i].end_node);
-    }
-
     // set initial forest:
     forest_size = node_list_size;
     forest = (int **)realloc(forest, sizeof(int *) * (forest_size));
@@ -255,7 +250,6 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
     int edge_idx;
     for (edge_idx = 0; edge_idx < n_edges; edge_idx++)
     {
-        printf("edge idx: %d\n", edge_idx);
         // take the starting point and look for it in the forest.
         int tree_idx;
         for (tree_idx = 0; tree_idx < forest_size; tree_idx++)
@@ -327,6 +321,7 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
                         for (/*no init*/; tree_idx_2 < tree_2_limit; tree_idx_2++)
                         {
                             forest[tree_idx_2] = forest[tree_idx_2 + 1];
+                            tree_size_list[tree_idx_2] = tree_size_list[tree_idx_2 + 1];
                         }
                         forest_size--;
                         forest = (int **)realloc(forest, sizeof(int *) * forest_size);
@@ -342,7 +337,6 @@ Edge *kruskal(Edge *edges, int n_edges, int *solution_size)
             }
         }
         // check if forest size is 1, if it is, return answer
-        printf("Forest size: %d\n", forest_size);
         if (forest_size == 1)
         {
             return solution;
